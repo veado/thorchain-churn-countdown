@@ -2,14 +2,14 @@ import { writable } from "svelte/store";
 import * as FP from "fp-ts/lib/function";
 import * as O from "fp-ts/lib/Option";
 import { derived } from "svelte/store";
+import { Theme } from "./types";
 
-export type Theme = "dark" | "light";
-
-const DEFAULT_THEME: Theme = "dark";
+const DEFAULT_THEME: Theme = Theme.DARK;
 const LS_KEY_THEME = "tcc-theme";
 
 // type guard
-const isTheme = (v: string): v is Theme => v === "dark" || v === "light";
+const isTheme = (v: string): v is Theme =>
+  v === Theme.DARK || v === Theme.LIGHT;
 
 // Update DOM - needed for theming
 const setAttribute = (t: Theme) =>
