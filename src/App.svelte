@@ -1,13 +1,28 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import CountdownTime from "./components/CountdownTime.svelte";
+  import CountdownBlock from "./components/CountdownBlock.svelte";
   import logo from "./assets/thorchain.png";
 
-  import { Cube, Clock } from "svelte-hero-icons";
+  import { Cube, Tag } from "svelte-hero-icons";
 
   import Icon from "svelte-hero-icons/Icon.svelte";
   import ThemeSwitch from "./components/ThemeSwitch.svelte";
   import { initTheme } from "./stores/theme";
+  import {
+    blockHeight$,
+    churnInterval$,
+    nextChurn$,
+    blockTime$,
+    blocksLeft$,
+    timeLeft$,
+    percentDone$,
+    churnIntervalTime$,
+  } from "./stores/churn";
+
+  type Time = "human" | "block";
+
+  let time: Time = "human";
 
   onMount(async () => {
     initTheme();
@@ -17,22 +32,27 @@
 <div class="flex flex-col h-screen">
   <div class="navbar mb-2 shadow-lg bg-neutral text-neutral-content">
     <div class="flex-1 px-2 mx-2 py-2">
-      <button class="btn btn-square btn-ghost">
-        <img src={logo} alt="logo" />
+      <button class="btn btn-circle btn-ghost">
+        <img src={logo} alt="logo" class="mask mask-circle" />
       </button>
     </div>
     <ThemeSwitch />
   </div>
   <main class="grid justify-center pt-8 flex-grow">
     <div>
-      <div class="card text-center shadow-2xl">
+      <div class="card text-center shadow-2xl min-w-[36em]">
         <div class="card-body">
-          <h1 class="text-4xl font-bold pt-2 pb-8">NEXT CHURN</h1>
-          <CountdownTime />
-          <div class="pt-8 artboard">
+          <h1 class="text-4xl font-bold pt-2 pb-8">CHURN COUNTDOWN</h1>
+          <!-- <div>time left: {JSON.stringify($timeLeft$)}</div> -->
+          {#if time === "human"}
+            <CountdownTime time={$timeLeft$} />
+          {:else}
+            <CountdownBlock blocks={$blocksLeft$} />
+          {/if}
+          <div class="pt-8">
             <progress
               class="progress progress-primary h-8"
-              value="75"
+              value={$percentDone$}
               max="100"
             />
           </div>
@@ -43,31 +63,46 @@
             <div class="stat-figure">
               <Icon src={Cube} size="48" class="outline-none" />
             </div>
-            <div class="stat-title">Block height</div>
-            <div class="stat-value">590012</div>
-            <div class="stat-desc">~5.5 s/b</div>
+            <div class="stat-title">Current block</div>
+            <div class="stat-value">{$blockHeight$}</div>
+            <div class="stat-desc">~{$blockTime$} s/b</div>
           </div>
           <div class="stat">
             <div class="stat-figure">
-              <Icon src={Clock} size="48" class="outline-none" />
+              <Icon src={Tag} size="48" class="outline-none" />
             </div>
-            <div class="stat-title">Churn interval</div>
-            <div class="stat-value">4,200</div>
-            <div class="stat-desc">blocks</div>
+            <div class="stat-title">Churn block</div>
+            <div class="stat-value">{$nextChurn$}</div>
+            <div class="stat-desc">
+              Churn interval:
+              {#if time === "human"}
+                {$churnIntervalTime$.days}d {$churnIntervalTime$.hours}h {$churnIntervalTime$.minutes}m
+              {:else}
+                {$churnInterval$} blocks
+              {/if}
+            </div>
           </div>
         </div>
       </div>
       <div class="flex justify-center items-center pt-8">
         <div class="btn-group">
-          <button class="btn btn-active btn-lg">Human<br /> time</button>
-          <button class="btn btn-lg">Block<br />time</button>
+          <button
+            on:click={() => (time = "human")}
+            class="btn btn-lg"
+            class:btn-active={time === "human"}>Human<br /> time</button
+          >
+          <button
+            on:click={() => (time = "block")}
+            class="btn btn-lg"
+            class:btn-active={time === "block"}>Block<br />time</button
+          >
         </div>
       </div>
     </div>
   </main>
   <footer class="mt-20 p-4 footer text-base-content footer-center">
     <!-- GH -->
-    <button class="btn btn-square btn-ghost drawer-button">
+    <button class="btn btn-circle btn-ghost drawer-button">
       <svg
         xmlns="http://www.w3.org/2000/svg"
         viewBox="0 0 512 512"
