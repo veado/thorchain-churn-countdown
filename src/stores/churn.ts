@@ -188,7 +188,17 @@ const getInitialBlockTime = () =>
     O.getOrElse(() => INITIAL_BLOCK_TIME)
   );
 
-/* Block time is calculated by average values for current blocks  */
+/**
+ * Block time is a calculated, average block time for observed blocks
+ * The more block are observed, the more precise the average value we get.
+ *
+ * Following adjustments are included:
+ * - Values are flatten to be two decimal seconds only (e.g. 5512ms -> 5500ms or 58999 -> 59000 )
+ * - Min. value 5500
+ * - Max. value 6000
+ *
+ * ^ That's needed to calculate a human block time for a range of blocks (churn interval) as precise as possible
+ */
 export const blockTime$ = blockTimes$.pipe(
   RxOp.map((times) => {
     if (!times.length) return getInitialBlockTime();
@@ -201,10 +211,14 @@ export const blockTime$ = blockTimes$.pipe(
       O.fromPredicate((v) => v > 0),
       // average values
       O.map((v) => Math.round(v / times.length)),
-      // flatten average values to get a better average -
-      // all others are too precise, but not real
-      // because we check just few (not all possible) blocks in front-end
+      // Flatten average values ignore small interferences
+      // Just because we check few (not all possible) blocks at front-end side only
+      // and don't want to be strict with some possible block time peeks (aka heavy blocks)
       O.map((v) => Math.round(v / 100) * 100),
+      // Adjust to <= 6 sec. - ignore higher values
+      O.map((v) => Math.min(v, 6000)),
+      // Adjust to >= 5.5 sec. - ignore lower values
+      O.map((v) => Math.max(v, 5500)),
       // persistent value to local storage
       O.map((v) => {
         localStorage.setItem(LS_BLOCKTIME, v.toString());
