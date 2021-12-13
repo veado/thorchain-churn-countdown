@@ -176,8 +176,6 @@ export const newBlock$: Rx.Observable<NewBlock> = ws$$
     RxOp.shareReplay(1)
   );
 
-blockTimes$.subscribe((v) => console.log("list:", v));
-
 const LS_BLOCKTIME = "tcc-btime";
 
 /* Get's intital block time from LS or use initial (guessed) value */
@@ -209,7 +207,6 @@ export const blockTime$ = blockTimes$.pipe(
       O.map((v) => Math.round(v / 100) * 100),
       // persistent value to local storage
       O.map((v) => {
-        console.log("Update LS:", v);
         localStorage.setItem(LS_BLOCKTIME, v.toString());
         return v;
       }),
@@ -219,8 +216,6 @@ export const blockTime$ = blockTimes$.pipe(
   RxOp.shareReplay(1),
   RxOp.startWith(getInitialBlockTime())
 );
-
-// blockTime$.subscribe((v) => console.log("blockTime$:", v));
 
 export const blockHeight$: Rx.Observable<number> = FP.pipe(
   newBlock$,
