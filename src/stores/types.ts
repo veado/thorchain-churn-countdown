@@ -13,9 +13,9 @@ export type HumanTime = {
 };
 
 /**
- * IO type for mimir endpoint
+ * IO type for Midgard's `mimir` endpoint
  * It includes few (not all) values we do need here only
- * https://thornode.thorchain.info/thorchain/mimir
+ * https://midgard.thorchain.info/v2/thorchain/mimir
  */
 export const mimirIO = t.type({
   "mimir//CHURNINTERVAL": t.number,
@@ -68,3 +68,5 @@ export const wsNewBlockIO = t.type({
 });
 
 export type WSNewBlock = t.TypeOf<typeof wsNewBlockIO>;
+
+export type NewBlock = { timestamp: number; time: string; height: number };
