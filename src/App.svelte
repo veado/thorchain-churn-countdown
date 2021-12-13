@@ -16,7 +16,7 @@
     blockTime$,
     blocksLeft$,
     timeLeft$,
-    percentDone$,
+    percentLeft$,
     churnIntervalTime$,
   } from "./stores/churn";
 
@@ -50,11 +50,16 @@
             <CountdownBlock blocks={$blocksLeft$} />
           {/if}
           <div class="pt-8">
-            <progress
-              class="progress progress-primary h-8"
-              value={$percentDone$}
-              max="100"
-            />
+            <div
+              data-tip="{$percentLeft$.toFixed(2)}% left"
+              class="tooltip w-full tooltip-bottom"
+            >
+              <progress
+                class="progress progress-primary h-8"
+                value={$percentLeft$}
+                max="100"
+              />
+            </div>
           </div>
         </div>
 
@@ -65,7 +70,7 @@
             </div>
             <div class="stat-title">Current block</div>
             <div class="stat-value">{$blockHeight$}</div>
-            <div class="stat-desc">~{$blockTime$} s/b</div>
+            <div class="stat-desc">~{($blockTime$ / 1000).toFixed(2)} s/b</div>
           </div>
           <div class="stat">
             <div class="stat-figure">

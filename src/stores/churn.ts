@@ -8,6 +8,8 @@ import { PathReporter } from "io-ts/lib/PathReporter";
 import * as RxAjax from "rxjs/ajax";
 import * as E from "fp-ts/lib/Either";
 import { webSocket } from "rxjs/webSocket";
+import * as A from "fp-ts/lib/Array";
+import * as O from "fp-ts/lib/Option";
 
 import dayjs from "dayjs";
 import duration from "dayjs/plugin/duration";
@@ -16,6 +18,7 @@ import type {
   MidgardConstants,
   MidgardNetwork,
   Mimir,
+  NewBlock,
   WSNewBlock,
 } from "./types";
 import {
@@ -24,7 +27,12 @@ import {
   midgardNetworkIO,
   wsNewBlockIO,
 } from "./types";
-import { INITIAL_BLOCK_TIME, INITIAL_HUMAN_TIME } from "./const";
+import {
+  INITIAL_BLOCK_TIME,
+  INITIAL_HUMAN_TIME,
+  INITIAL_NEW_BLOCK,
+} from "./const";
+import { writable, derived } from "svelte/store";
 
 // https://day.js.org/docs/en/plugin/duration
 dayjs.extend(duration);
@@ -33,17 +41,14 @@ const MIDGARD_API_URL = envOrDefault(
   import.meta.env.VITE_MIDGARD_API_URL,
   "https://midgard.thorchain.info/v2"
 );
-const THORCHAIN_API_URL = envOrDefault(
-  import.meta.env.VITE_THORCHAIN_API_URL,
-  "https://thornode.thorchain.info"
-);
+
 const THORCHAIN_WS_URL = envOrDefault(
   import.meta.env.VITE_THORCHAIN_WS_URL,
   "wss://rpc.thorchain.info/websocket"
 );
 
 const mimir$ = FP.pipe(
-  RxAjax.ajax.getJSON<Mimir>(`${THORCHAIN_API_URL}/thorchain/mimir`),
+  RxAjax.ajax.getJSON<Mimir>(`${MIDGARD_API_URL}/thorchain/mimir`),
   RxOp.map((response) => mimirIO.decode(response)),
   RxOp.map((result) =>
     // t.Errors -> Error
@@ -88,7 +93,7 @@ export const churnInterval$ = FP.pipe(
   RxOp.switchMap(([eResult, _]) =>
     FP.pipe(
       eResult,
-      // In case of failure (no mimir set), load data from Midgard
+      // In case of failure (no mimir set), load data from `constants`
       E.fold(
         () => midgardConstantsChurnInterval$,
         (v) => Rx.of(E.right(v))
@@ -115,9 +120,12 @@ const midgardNetwork$ = FP.pipe(
   RxOp.shareReplay(1)
 );
 
+const blockTimes$ = new Rx.BehaviorSubject<number[]>([]);
+// const _blockTimes = writable<number[]>([]);
+
 const ws$$ = webSocket(THORCHAIN_WS_URL);
 
-export const newBlock$ = ws$$
+export const newBlock$: Rx.Observable<NewBlock> = ws$$
   .multiplex(
     () => ({
       jsonrpc: "2.0",
@@ -144,16 +152,75 @@ export const newBlock$ = ws$$
       FP.pipe(
         wsNewBlockIO.decode(event),
         E.fold(
-          () => ({ time: dayjs(0), height: 0 }),
+          () => INITIAL_NEW_BLOCK,
           (v) => ({
-            time: dayjs(v.result.data.value.block.header.time),
+            time: v.result.data.value.block.header.time,
+            timestamp: dayjs(v.result.data.value.block.header.time).valueOf(),
             height: parseInt(v.result.data.value.block.header.height),
           })
         )
       )
     ),
+    RxOp.startWith(INITIAL_NEW_BLOCK),
+    RxOp.pairwise(),
+    RxOp.map(([prev, current]) => {
+      // ignore initial zero value
+      if (prev.timestamp > 0) {
+        const diffMs = dayjs(current.timestamp).diff(dayjs(prev.timestamp));
+        // update list of all current blocktimes
+        blockTimes$.next([...blockTimes$.getValue(), diffMs]);
+      }
+      return current;
+    }),
+
     RxOp.shareReplay(1)
   );
+
+blockTimes$.subscribe((v) => console.log("list:", v));
+
+const LS_BLOCKTIME = "tcc-btime";
+
+/* Get's intital block time from LS or use initial (guessed) value */
+const getInitialBlockTime = () =>
+  FP.pipe(
+    localStorage.getItem(LS_BLOCKTIME),
+    O.fromNullable,
+    O.map(parseInt),
+    O.chain(O.fromPredicate(Number.isInteger)),
+    O.getOrElse(() => INITIAL_BLOCK_TIME)
+  );
+
+/* Block time is calculated by average values for current blocks  */
+export const blockTime$ = blockTimes$.pipe(
+  RxOp.map((times) => {
+    if (!times.length) return getInitialBlockTime();
+
+    return FP.pipe(
+      times,
+      // sum
+      A.reduce(0, (prev, next) => prev + next),
+      // ignore initial zero value
+      O.fromPredicate((v) => v > 0),
+      // average values
+      O.map((v) => Math.round(v / times.length)),
+      // flatten average values to get a better average -
+      // all others are too precise, but not real
+      // because we check just few (not all possible) blocks in front-end
+      O.map((v) => Math.round(v / 100) * 100),
+      // persistent value to local storage
+      O.map((v) => {
+        console.log("Update LS:", v);
+        localStorage.setItem(LS_BLOCKTIME, v.toString());
+        return v;
+      }),
+      O.getOrElse(() => getInitialBlockTime())
+    );
+  }),
+  RxOp.shareReplay(1),
+  RxOp.startWith(getInitialBlockTime())
+);
+
+// blockTime$.subscribe((v) => console.log("blockTime$:", v));
 
 export const blockHeight$: Rx.Observable<number> = FP.pipe(
   newBlock$,
@@ -173,9 +240,6 @@ export const nextChurn$: Rx.Observable<number> = FP.pipe(
   RxOp.startWith(0)
 );
 
-// TODO: Get average block-time
-export const blockTime$ = Rx.of(INITIAL_BLOCK_TIME);
-
 export const blocksLeft$: Rx.Observable<number> = FP.pipe(
   Rx.combineLatest([nextChurn$, blockHeight$]),
   RxOp.map(([nextChurn, blockHeight]) => {
@@ -186,20 +250,20 @@ export const blocksLeft$: Rx.Observable<number> = FP.pipe(
   })
 );
 
-export const percentDone$: Rx.Observable<number> = FP.pipe(
+export const percentLeft$: Rx.Observable<number> = FP.pipe(
   Rx.combineLatest([churnInterval$, blocksLeft$]),
   RxOp.map(([churnInterval, blocksLeft]) => {
     // ignore zero values
     if (!churnInterval || !blocksLeft) return 1;
 
-    return 100 - (blocksLeft * 100) / churnInterval;
+    return (blocksLeft * 100) / churnInterval;
   })
 );
 
 export const timeLeft$: Rx.Observable<HumanTime> = FP.pipe(
   Rx.combineLatest([blocksLeft$, blockTime$]),
   RxOp.map(([blocksLeft, blockTime]) => {
-    const secondsLeftMs = blocksLeft * blockTime * 1000;
+    const secondsLeftMs = blocksLeft * blockTime;
 
     const d = dayjs.duration(secondsLeftMs);
 
@@ -218,7 +282,7 @@ export const timeLeft$: Rx.Observable<HumanTime> = FP.pipe(
 export const churnIntervalTime$: Rx.Observable<HumanTime> = FP.pipe(
   Rx.combineLatest([churnInterval$, blockTime$]),
   RxOp.map(([churnInterval, blockTime]) => {
-    const secondsLeftMs = churnInterval * blockTime * 1000;
+    const secondsLeftMs = churnInterval * blockTime;
     const d = dayjs.duration(secondsLeftMs);
     const timeLeft: HumanTime = {
       // ignore seconds
