@@ -6,7 +6,7 @@ https://veado.github.io/thorchain-churn-countdown
 
 ## How does it work
 
-The app fetches data from `Midgard` (churn interval, last churn) and subscribes to THORChains (powered by Tendermint's) websocket events to get latest block data (block height, block time). Since block time is different, it adjusts the block time behind the scenes to get an average value.
+The app fetches data from `Midgard` (churn interval, last churn) and subscribes to [THORChains](https://docs.thorchain.org/) (powered by [Tendermint](https://tendermint.com/)) websocket events to get latest block data (block height, block time). Since block times are different, it adjusts values behind the scenes to get an average block time.
 
 ## Build with (in alphabetical order)
 
