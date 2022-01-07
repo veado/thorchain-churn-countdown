@@ -1,3 +1,4 @@
+/// <reference types="svelte" />
 // Vite
 // IntelliSense for TypeScript
 // https://vitejs.dev/guide/env-and-mode.html#intellisense-for-typescript
@@ -11,4 +12,8 @@ interface ImportMetaEnv {
 
 interface ImportMeta {
   readonly env: ImportMetaEnv;
+}
+
+interface Window {
+  __COMMITHASH__: string;
 }

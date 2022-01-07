@@ -84,7 +84,7 @@ const midgardConstantsChurnInterval$ = FP.pipe(
   RxOp.map(E.map((v) => v.int_64_values.ChurnInterval))
 );
 
-export const churnInterval$ = FP.pipe(
+export const churnInterval$: Rx.Observable<number> = FP.pipe(
   Rx.combineLatest([
     mimirChurnInterval$,
     Rx.timer(0 /* trigger w/o delays */, 5 * 60 * 1000 /* 5 min  */),
@@ -99,7 +99,7 @@ export const churnInterval$ = FP.pipe(
       )
     )
   ),
-  RxOp.map((v) => E.getOrElse(() => 0)(v)),
+  RxOp.map(E.getOrElse(() => 0)),
   RxOp.startWith(0)
 );
 
@@ -120,7 +120,6 @@ const midgardNetwork$ = FP.pipe(
 );
 
 const blockTimes$ = new Rx.BehaviorSubject<number[]>([]);
-// const _blockTimes = writable<number[]>([]);
 
 const ws$$ = webSocket(THORCHAIN_WS_URL);
 
