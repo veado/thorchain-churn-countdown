@@ -12,18 +12,18 @@ The app fetches data from [Midgard](https://midgard.thorchain.info/v2/doc) (chur
 
 ```bash
 # install dependencies (only once)
-yarn
+npm i
 # run app locally - open http://localhost:3000/thorchain-churn-countdown/
-yarn dev
+npm run dev
 ```
 
 ## Prepare deployment
 
 ```bash
 # Build sources for deployment into 'dist` folder
-yarn build
+npm run build
 # check deployment locally by opening http://localhost:5000/thorchain-churn-countdown/
-yarn preview
+npm run preview
 ```
 
 All sources in `dist` folder are ready to deploy.
