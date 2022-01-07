@@ -2,7 +2,7 @@
 
 **LIVE** :eyes: https://veado.github.io/thorchain-churn-countdown
 
-![Preview](./wiki/preview.gif)
+![Preview](./wiki/preview2.gif)
 
 ## How does it work
 
@@ -13,7 +13,7 @@ The app fetches data from [Midgard](https://midgard.thorchain.info/v2/doc) (chur
 ```bash
 # install dependencies (only once)
 yarn
-# run app locally - open http://localhost:3000
+# run app locally - open http://localhost:3000/thorchain-churn-countdown/
 yarn dev
 ```
 
@@ -22,7 +22,7 @@ yarn dev
 ```bash
 # Build sources for deployment into 'dist` folder
 yarn build
-# check deployment locally by opening http://localhost:5000
+# check deployment locally by opening http://localhost:5000/thorchain-churn-countdown/
 yarn preview
 ```
 

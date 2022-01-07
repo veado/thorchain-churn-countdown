@@ -2,7 +2,7 @@
   import { theme, updateTheme } from "../stores/theme";
 
   import { Moon, Sun } from "svelte-hero-icons";
-  import Icon from "svelte-hero-icons/Icon.svelte";
+  import { Icon } from "svelte-hero-icons";
   import { Theme } from "../stores/types";
 </script>
 
