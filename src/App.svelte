@@ -6,7 +6,7 @@
 
   import { Cube, Tag } from "svelte-hero-icons";
 
-  import Icon from "svelte-hero-icons/Icon.svelte";
+  import { Icon } from "svelte-hero-icons";
   import ThemeSwitch from "./components/ThemeSwitch.svelte";
   import { initTheme } from "./stores/theme";
   import {
