@@ -18,7 +18,8 @@ export type HumanTime = {
  * https://midgard.thorchain.info/v2/thorchain/mimir
  */
 export const mimirIO = t.type({
-  "mimir//CHURNINTERVAL": t.number,
+  "mimir//CHURNINTERVAL": t.union([t.number, t.undefined]),
+  CHURNINTERVAL: t.union([t.number, t.undefined]),
 });
 
 export type Mimir = t.TypeOf<typeof mimirIO>;
