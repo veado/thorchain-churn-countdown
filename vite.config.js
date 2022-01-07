@@ -3,7 +3,10 @@ import { svelte } from "@sveltejs/vite-plugin-svelte";
 
 import { execSync } from "child_process";
 
-const commitHash = execSync("git rev-parse --short HEAD").toString();
+// parse and provide commit hash in Vite's `env`
+process.env.VITE_COMMIT_HASH = execSync(
+  "git rev-parse --short HEAD"
+).toString();
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -12,8 +15,5 @@ export default defineConfig({
   plugins: [svelte()],
   optimizeDeps: {
     include: ["svelte-hero-icons"],
-  },
-  define: {
-    __COMMITHASH__: JSON.stringify(commitHash),
   },
 });

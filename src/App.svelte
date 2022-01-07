@@ -107,10 +107,14 @@
   </main>
   <footer class="mt-20 p-4 footer text-base-content footer-center">
     <!-- GH -->
-    <div data-tip="commit {window.__COMMITHASH__}" class="tooltip w-full">
+    <div
+      data-tip="commit {import.meta.env.VITE_COMMIT_HASH}"
+      class="tooltip w-full"
+    >
       <a
         class="btn btn-circle btn-ghost drawer-button"
-        href="https://github.com/veado/thorchain-churn-countdown/commit/{window.__COMMITHASH__}"
+        href="https://github.com/veado/thorchain-churn-countdown/commit/{import.meta
+          .env.VITE_COMMIT_HASH}"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
