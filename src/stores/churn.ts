@@ -32,7 +32,6 @@ import {
   INITIAL_HUMAN_TIME,
   INITIAL_NEW_BLOCK,
 } from "./const";
-import { writable, derived } from "svelte/store";
 
 // https://day.js.org/docs/en/plugin/duration
 dayjs.extend(duration);
@@ -61,7 +60,7 @@ const mimir$ = FP.pipe(
 
 const mimirChurnInterval$ = FP.pipe(
   mimir$,
-  RxOp.map(E.map((v) => v["mimir//CHURNINTERVAL"]))
+  RxOp.map(E.map((v) => v["mimir//CHURNINTERVAL"] || v.CHURNINTERVAL))
 );
 
 const midgardConstants$ = FP.pipe(
