@@ -39,11 +39,33 @@ import {
 // https://day.js.org/docs/en/plugin/duration
 dayjs.extend(duration);
 
-export const churnType$ = new Rx.BehaviorSubject<Churn>(ChurnNodes);
+const LS_CHURNTYPE = "tcc-ctype";
+/* Try to get's intital churn type from LS */
+const getInitialChurnType = (): Churn =>
+  FP.pipe(
+    localStorage.getItem(LS_CHURNTYPE),
+    O.fromNullable,
+    O.chain(
+      O.fromPredicate<"pools" | "nodes">((v) => v === "pools" || v === "nodes")
+    ),
+    // string -> Churn
+    O.map((v) => (v === "pools" ? ChurnPools : ChurnNodes)),
+    O.getOrElse(() => ChurnNodes)
+  );
+
+export const churnType$ = new Rx.BehaviorSubject<Churn>(getInitialChurnType());
 
 // export const changeChurnType = (type: Churn) => churnType$.next(type);
-export const toggleChurnType = () =>
-  churnType$.next(E.isLeft(churnType$.value) ? ChurnNodes : ChurnPools);
+export const toggleChurnType = () => {
+  // get next value
+  const next = E.isLeft(churnType$.value) ? ChurnNodes : ChurnPools;
+  // update LS
+  FP.pipe(next, E.fold(FP.identity, FP.identity), (value) =>
+    localStorage.setItem(LS_CHURNTYPE, value)
+  );
+  // update state
+  churnType$.next(next);
+};
 
 const MIDGARD_API_URL = envOrDefault(
   import.meta.env.VITE_MIDGARD_API_URL,

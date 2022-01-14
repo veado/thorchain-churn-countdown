@@ -1,6 +1,5 @@
 <script lang="ts">
   import * as E from "fp-ts/lib/Either";
-  import * as FP from "fp-ts/lib/function";
 
   import { onMount } from "svelte";
   import CountdownTime from "./components/CountdownTime.svelte";
@@ -46,22 +45,20 @@
   <main class="grid justify-center pt-8 flex-grow">
     <div>
       <div class="card text-center shadow-2xl min-w-[36em]">
-        <div class="card-body">
+        <div class="btn-group w-full">
           <button
             on:click={() => toggleChurnType()}
-            class="btn btn-ghost btn-block btn-lg "
+            class="btn btn-lg w-1/2"
+            class:btn-active={E.isRight($churnType$)}>Nodes</button
           >
-            <h1 class="text-6xl ">
-              {FP.pipe(
-                $churnType$,
-                E.fold(
-                  (_ /* pools */) => "Pools",
-                  (_ /* nodes */) => "Nodes"
-                )
-              )}
-            </h1>
-          </button>
-          <h2 class="text-3xl font-bold pb-8">CHURN COUNTDOWN</h2>
+          <button
+            on:click={() => toggleChurnType()}
+            class="btn btn-lg w-1/2"
+            class:btn-active={E.isLeft($churnType$)}>Pools</button
+          >
+        </div>
+        <div class="card-body">
+          <h2 class="text-5xl font-bold pb-10 pt-4">CHURN COUNTDOWN</h2>
           {#if time === "human"}
             <CountdownTime time={$timeLeft$} />
           {:else}
@@ -123,13 +120,13 @@
       </div>
     </div>
   </main>
-  <footer class="mt-20 p-4 footer text-base-content footer-center">
+  <footer class="mt-10 p-4 footer text-base-content footer-center">
     <!-- GH -->
-    <div
-      data-tip="commit {import.meta.env.VITE_COMMIT_HASH}"
-      class="tooltip w-full"
-    >
-      <div class="flex flex-col place-items-center">
+    <div class=" w-full">
+      <div
+        class="flex flex-col place-items-center tooltip"
+        data-tip="commit {import.meta.env.VITE_COMMIT_HASH}"
+      >
         <a
           class="btn btn-circle btn-ghost drawer-button"
           href="https://github.com/veado/thorchain-churn-countdown"
