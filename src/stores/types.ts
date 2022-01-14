@@ -1,9 +1,16 @@
+import type { Either } from "fp-ts/lib/Either";
+import * as E from "fp-ts/lib/Either";
 import * as t from "io-ts";
 
 export enum Theme {
   DARK = "dark",
   LIGHT = "light",
 }
+
+export type Churn = Either<"pools", "nodes">;
+
+export const ChurnNodes: Churn = E.right("nodes");
+export const ChurnPools: Churn = E.left("pools");
 
 export type HumanTime = {
   seconds: number;
@@ -18,8 +25,8 @@ export type HumanTime = {
  * https://midgard.thorchain.info/v2/thorchain/mimir
  */
 export const mimirIO = t.type({
-  "mimir//CHURNINTERVAL": t.union([t.number, t.undefined]),
   CHURNINTERVAL: t.union([t.number, t.undefined]),
+  POOLCYCLE: t.union([t.number, t.undefined]),
 });
 
 export type Mimir = t.TypeOf<typeof mimirIO>;
@@ -32,6 +39,7 @@ export type Mimir = t.TypeOf<typeof mimirIO>;
 export const midgardConstantsIO = t.type({
   int_64_values: t.type({
     ChurnInterval: t.number,
+    PoolCycle: t.number,
   }),
 });
 
@@ -44,6 +52,7 @@ export type MidgardConstants = t.TypeOf<typeof midgardConstantsIO>;
  */
 export const midgardNetworkIO = t.type({
   nextChurnHeight: t.string,
+  poolActivationCountdown: t.string,
 });
 
 export type MidgardNetwork = t.TypeOf<typeof midgardNetworkIO>;

@@ -13,13 +13,16 @@ import * as O from "fp-ts/lib/Option";
 
 import dayjs from "dayjs";
 import duration from "dayjs/plugin/duration";
-import type {
-  HumanTime,
-  MidgardConstants,
-  MidgardNetwork,
-  Mimir,
-  NewBlock,
-  WSNewBlock,
+import {
+  ChurnNodes,
+  ChurnPools,
+  type Churn,
+  type HumanTime,
+  type MidgardConstants,
+  type MidgardNetwork,
+  type Mimir,
+  type NewBlock,
+  type WSNewBlock,
 } from "./types";
 import {
   midgardConstantsIO,
@@ -35,6 +38,12 @@ import {
 
 // https://day.js.org/docs/en/plugin/duration
 dayjs.extend(duration);
+
+export const churnType$ = new Rx.BehaviorSubject<Churn>(ChurnNodes);
+
+// export const changeChurnType = (type: Churn) => churnType$.next(type);
+export const toggleChurnType = () =>
+  churnType$.next(E.isLeft(churnType$.value) ? ChurnNodes : ChurnPools);
 
 const MIDGARD_API_URL = envOrDefault(
   import.meta.env.VITE_MIDGARD_API_URL,
@@ -54,13 +63,23 @@ const mimir$ = FP.pipe(
     E.mapLeft((_: t.Errors) =>
       Error(`Failed to load mimir ${PathReporter.report(result)}`)
     )(result)
-  ),
+  )
+);
+
+const mimirInterval$ = FP.pipe(
+  Rx.timer(0 /* trigger w/o delays */, 5 * 60 * 1000 /* 5 min  */),
+  Rx.switchMapTo(mimir$),
   RxOp.shareReplay(1)
 );
 
-const mimirChurnInterval$ = FP.pipe(
-  mimir$,
-  RxOp.map(E.map((v) => v["mimir//CHURNINTERVAL"] || v.CHURNINTERVAL))
+const mimirNodeChurnInterval$ = FP.pipe(
+  mimirInterval$,
+  RxOp.map(E.map((v) => v.CHURNINTERVAL))
+);
+
+const mimirPoolCycle$ = FP.pipe(
+  mimirInterval$,
+  RxOp.map(E.map((v) => v.POOLCYCLE))
 );
 
 const midgardConstants$ = FP.pipe(
@@ -79,22 +98,19 @@ const midgardConstants$ = FP.pipe(
   RxOp.shareReplay(1)
 );
 
-const midgardConstantsChurnInterval$ = FP.pipe(
+const midgardConstantsNodeChurnInterval$ = FP.pipe(
   midgardConstants$,
   RxOp.map(E.map((v) => v.int_64_values.ChurnInterval))
 );
 
-export const churnInterval$: Rx.Observable<number> = FP.pipe(
-  Rx.combineLatest([
-    mimirChurnInterval$,
-    Rx.timer(0 /* trigger w/o delays */, 5 * 60 * 1000 /* 5 min  */),
-  ]),
-  RxOp.switchMap(([eResult, _]) =>
+export const nodeChurnInterval$: Rx.Observable<number> = FP.pipe(
+  mimirNodeChurnInterval$,
+  RxOp.switchMap((eResult) =>
     FP.pipe(
       eResult,
       // In case of failure (no mimir set), load data from `constants`
       E.fold(
-        () => midgardConstantsChurnInterval$,
+        () => midgardConstantsNodeChurnInterval$,
         (v) => Rx.of(E.right(v))
       )
     )
@@ -103,20 +119,62 @@ export const churnInterval$: Rx.Observable<number> = FP.pipe(
   RxOp.startWith(0)
 );
 
-const midgardNetwork$ = FP.pipe(
-  RxAjax.ajax.getJSON<MidgardNetwork>(`${MIDGARD_API_URL}/network`),
-  RxOp.map((response) => midgardNetworkIO.decode(response)),
-  RxOp.map((result) =>
-    // t.Errors -> Error
-    E.mapLeft((_: t.Errors) =>
-      Error(
-        `Failed to load network data from Midgard ${PathReporter.report(
-          result
-        )}`
+const midgardConstantsPoolCycle$ = FP.pipe(
+  midgardConstants$,
+  RxOp.map(E.map((v) => v.int_64_values.PoolCycle))
+);
+
+export const poolChurnInterval$: Rx.Observable<number> = FP.pipe(
+  mimirPoolCycle$,
+  RxOp.switchMap((eResult) =>
+    FP.pipe(
+      eResult,
+      // In case of failure (no mimir set), load data from `constants`
+      E.fold(
+        () => midgardConstantsPoolCycle$,
+        (v) => Rx.of(E.right(v))
       )
-    )(result)
+    )
+  ),
+  RxOp.map(E.getOrElse(() => 0)),
+  RxOp.startWith(0)
+);
+
+export const churnInterval$: Rx.Observable<number> = FP.pipe(
+  churnType$,
+  Rx.switchMap((type) =>
+    FP.pipe(
+      type,
+      E.fold(
+        (_ /* pools */) => poolChurnInterval$,
+        (_ /* nodes */) => nodeChurnInterval$
+      )
+    )
   ),
   RxOp.shareReplay(1)
+);
+
+const midgardNetwork$ = () =>
+  FP.pipe(
+    RxAjax.ajax.getJSON<MidgardNetwork>(`${MIDGARD_API_URL}/network`),
+    RxOp.map((response) => midgardNetworkIO.decode(response)),
+    RxOp.map((result) =>
+      // t.Errors -> Error
+      E.mapLeft((_: t.Errors) =>
+        Error(
+          `Failed to load network data from Midgard ${PathReporter.report(
+            result
+          )}`
+        )
+      )(result)
+    )
+  );
+
+// Reload Midgard `network` every 5 min
+const midgardNetworkInterval$ = FP.pipe(
+  Rx.timer(0 /* trigger w/o delays */, 5 * 60 * 1000 /* 5 min  */),
+  Rx.switchMapTo(midgardNetwork$()),
+  Rx.shareReplay(1)
 );
 
 const blockTimes$ = new Rx.BehaviorSubject<number[]>([]);
@@ -232,7 +290,8 @@ export const blockTime$ = blockTimes$.pipe(
 export const blockHeight$: Rx.Observable<number> = FP.pipe(
   newBlock$,
   RxOp.map(({ height }) => height),
-  RxOp.startWith(0)
+  RxOp.startWith(0),
+  RxOp.shareReplay(1)
 );
 
 // MOCKING data - for debugging only
@@ -242,8 +301,9 @@ export const blockHeight$: Rx.Observable<number> = FP.pipe(
 //   RxOp.startWith(0)
 // );
 
-export const nextChurn$: Rx.Observable<number> = FP.pipe(
-  midgardNetwork$,
+// Block height of next Node churn
+const nextNodeChurn$: Rx.Observable<number> = FP.pipe(
+  midgardNetworkInterval$,
   RxOp.map((eResult) =>
     FP.pipe(
       eResult,
@@ -252,6 +312,57 @@ export const nextChurn$: Rx.Observable<number> = FP.pipe(
   ),
   RxOp.map(E.getOrElse(() => 0)),
   RxOp.startWith(0)
+);
+
+export const poolActivationCountdown$: Rx.Observable<number> = FP.pipe(
+  midgardNetworkInterval$,
+  RxOp.map((eResult) =>
+    FP.pipe(
+      eResult,
+      E.map(({ poolActivationCountdown }) => parseInt(poolActivationCountdown))
+    )
+  ),
+  RxOp.map(E.getOrElse(() => 0)),
+  RxOp.startWith(0)
+);
+
+// Next pool churn does some internal calculations to keep requests to Midgard small
+const nextPoolChurn$ = (): Rx.Observable<number> => {
+  // Local state to count number of new block height coming in
+  let counter = 0;
+  // Local state of `poolActivationCountdown` we get from Midgard
+  let countdown = 0;
+  return FP.pipe(
+    poolActivationCountdown$,
+    Rx.tap((value) => {
+      // Update countdown state
+      countdown = value;
+      // Reset counter
+      counter = 0;
+    }),
+    Rx.switchMapTo(blockHeight$),
+    RxOp.map((blockHeight) => {
+      // With each new block height, we increase counter ...
+      counter++;
+      // ... to calculate next pool churn height
+      return blockHeight + countdown - counter;
+    }),
+    RxOp.startWith(0)
+  );
+};
+
+export const nextChurn$: Rx.Observable<number> = FP.pipe(
+  churnType$,
+  RxOp.switchMap((churnType) =>
+    FP.pipe(
+      churnType,
+      E.fold(
+        (_ /* pools */) => nextPoolChurn$(),
+        (_ /* nodes */) => nextNodeChurn$
+      )
+    )
+  ),
+  RxOp.shareReplay(1)
 );
 
 // MOCKING data - for debugging only
@@ -267,6 +378,7 @@ export const blocksLeft$: Rx.Observable<number> = FP.pipe(
     if (!nextChurn || !blockHeight) return 0;
 
     const blocksLeft = nextChurn - blockHeight;
+
     // Don't accept negative values (happens right after a churn)
     return blocksLeft > 0 ? blocksLeft : 0;
   })
