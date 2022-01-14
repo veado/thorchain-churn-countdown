@@ -9,12 +9,9 @@ interface ImportMetaEnv {
   readonly VITE_MIDGARD_API_URL: string;
   readonly VITE_THORCHAIN_WS_URL: string;
   readonly VITE_COMMIT_HASH: string;
+  readonly VITE_VERSION: string;
 }
 
 interface ImportMeta {
   readonly env: ImportMetaEnv;
-}
-
-interface Window {
-  __COMMITHASH__: string;
 }
