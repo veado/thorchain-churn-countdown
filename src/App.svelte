@@ -113,8 +113,7 @@
     >
       <a
         class="btn btn-circle btn-ghost drawer-button"
-        href="https://github.com/veado/thorchain-churn-countdown/commit/{import.meta
-          .env.VITE_COMMIT_HASH}"
+        href="https://github.com/veado/thorchain-churn-countdown"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"

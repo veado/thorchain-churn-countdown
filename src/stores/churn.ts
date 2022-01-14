@@ -235,6 +235,13 @@ export const blockHeight$: Rx.Observable<number> = FP.pipe(
   RxOp.startWith(0)
 );
 
+// MOCKING data - for debugging only
+// export const blockHeight$: Rx.Observable<number> = FP.pipe(
+//   Rx.interval(250),
+//   Rx.map((v) => 3802330 + v),
+//   RxOp.startWith(0)
+// );
+
 export const nextChurn$: Rx.Observable<number> = FP.pipe(
   midgardNetwork$,
   RxOp.map((eResult) =>
@@ -247,13 +254,21 @@ export const nextChurn$: Rx.Observable<number> = FP.pipe(
   RxOp.startWith(0)
 );
 
+// MOCKING data - for debugging only
+// export const nextChurn$: Rx.Observable<number> = FP.pipe(
+//   Rx.of(3802440),
+//   RxOp.startWith(0)
+// );
+
 export const blocksLeft$: Rx.Observable<number> = FP.pipe(
   Rx.combineLatest([nextChurn$, blockHeight$]),
   RxOp.map(([nextChurn, blockHeight]) => {
     // values can be zero
     if (!nextChurn || !blockHeight) return 0;
 
-    return nextChurn - blockHeight;
+    const blocksLeft = nextChurn - blockHeight;
+    // Don't accept negative values (happens right after a churn)
+    return blocksLeft > 0 ? blocksLeft : 0;
   })
 );
 
@@ -261,7 +276,7 @@ export const percentLeft$: Rx.Observable<number> = FP.pipe(
   Rx.combineLatest([churnInterval$, blocksLeft$]),
   RxOp.map(([churnInterval, blocksLeft]) => {
     // ignore zero values
-    if (!churnInterval || !blocksLeft) return 1;
+    if (!churnInterval || !blocksLeft) return 0;
 
     return (blocksLeft * 100) / churnInterval;
   })
