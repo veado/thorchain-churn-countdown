@@ -34,17 +34,17 @@
 </script>
 
 <div class="flex flex-col h-screen">
-  <div class="navbar mb-2 shadow-lg bg-neutral text-neutral-content">
-    <div class="flex-1 px-2 mx-2 py-2">
+  <div class="navbar mb-1 sm:mb-2 shadow-lg bg-neutral text-neutral-content">
+    <div class="flex-1 p-1 sm:p-2 mx-1 sm:mx-2">
       <a class="btn btn-circle btn-ghost" href="https://docs.thorchain.org">
         <img src={logo} alt="logo" class="mask mask-circle" />
       </a>
     </div>
     <ThemeSwitch />
   </div>
-  <main class="grid justify-center pt-8 flex-grow">
+  <main class="grid justify-center pt-6 sm:pt-8 flex-grow">
     <div>
-      <div class="card text-center shadow-2xl min-w-[36em]">
+      <div class="card text-center shadow-2xl">
         <div class="btn-group w-full">
           <button
             on:click={() => toggleChurnType()}
@@ -57,8 +57,10 @@
             class:btn-active={E.isLeft($churnType$)}>Pools</button
           >
         </div>
-        <div class="card-body">
-          <h2 class="text-5xl font-bold pb-10 pt-4">CHURN COUNTDOWN</h2>
+        <div class="card-body pb-2 sm:pb-10">
+          <h2 class="text-2xl sm:text-4xl font-bold pb-10 pt-4">
+            CHURN COUNTDOWN
+          </h2>
           {#if time === "human"}
             <CountdownTime time={$timeLeft$} />
           {:else}
@@ -66,19 +68,19 @@
           {/if}
           <div class="pt-8">
             <div
-              data-tip="{(100 - $percentLeft$).toFixed(2)}% completed"
+              data-tip="{$percentLeft$.toFixed(2)}% left"
               class="tooltip w-full tooltip-bottom"
             >
               <progress
-                class="progress progress-primary h-8"
-                value={100 - $percentLeft$}
+                class="progress progress-primary h-4 sm:h-8"
+                value={$percentLeft$}
                 max="100"
               />
             </div>
           </div>
         </div>
 
-        <div class="w-full shadow stats">
+        <div class="grid-flow-row sm:grid-flow-col shadow stats">
           <div class="stat">
             <div class="stat-figure">
               <Icon src={Cube} size="48" class="outline-none" />
@@ -87,7 +89,8 @@
             <div class="stat-value">{$blockHeight$}</div>
             <div class="stat-desc">~{($blockTime$ / 1000).toFixed(2)} s/b</div>
           </div>
-          <div class="stat">
+          <!-- override borders https://github.com/saadeghi/daisyui/issues/440 -->
+          <div class="stat sm:!border-l sm:!border-t-0">
             <div class="stat-figure">
               <Icon src={Tag} size="48" class="outline-none" />
             </div>
