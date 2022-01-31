@@ -68,12 +68,12 @@
           {/if}
           <div class="pt-8">
             <div
-              data-tip="{(100 - $percentLeft$).toFixed(2)}% completed"
+              data-tip="{$percentLeft$.toFixed(2)}% left"
               class="tooltip w-full tooltip-bottom"
             >
               <progress
                 class="progress progress-primary h-4 sm:h-8"
-                value={100 - $percentLeft$}
+                value={$percentLeft$}
                 max="100"
               />
             </div>
