@@ -1,7 +1,7 @@
 const {
   "[data-theme=dark]": darkTheme,
   "[data-theme=light]": lightTheme,
-} = require("daisyui/colors/themes");
+} = require("daisyui/src/colors/themes");
 
 const config = {
   content: ["./src/**/*.{html,js,svelte,ts}"],
@@ -13,6 +13,8 @@ const config = {
   plugins: [require("daisyui")],
 
   daisyui: {
+    // How to customize an existing theme?
+    // https://daisyui.com/docs/themes/
     themes: [
       {
         dark: {

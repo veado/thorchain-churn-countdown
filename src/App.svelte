@@ -80,7 +80,7 @@
           </div>
         </div>
 
-        <div class="grid-flow-row sm:grid-flow-col shadow stats">
+        <div class="shadow stats stats-vertical sm:stats-horizontal">
           <div class="stat">
             <div class="stat-figure">
               <Icon src={Cube} size="48" class="outline-none" />
@@ -89,8 +89,7 @@
             <div class="stat-value">{$blockHeight$}</div>
             <div class="stat-desc">~{($blockTime$ / 1000).toFixed(2)} s/b</div>
           </div>
-          <!-- override borders https://github.com/saadeghi/daisyui/issues/440 -->
-          <div class="stat sm:!border-l sm:!border-t-0">
+          <div class="stat">
             <div class="stat-figure">
               <Icon src={Tag} size="48" class="outline-none" />
             </div>
