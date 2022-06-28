@@ -20,6 +20,9 @@ const config = {
         dark: {
           ...darkTheme,
           primary: "#2fdcc7",
+          "--b1": "219 14% 28%",
+          "--bc": "228 14% 93%",
+          "--nc": "228 14% 93%",
         },
         light: {
           ...lightTheme,
