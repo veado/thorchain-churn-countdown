@@ -6,7 +6,7 @@
 
 ## How does it work
 
-The app fetches data from [Midgard](https://midgard.thorchain.info/v2/doc) (churn interval, next churn) and subscribes to [THORChain](https://docs.thorchain.org/)'s websocket events (powered by [Tendermint RPC](https://docs.tendermint.com/master/rpc/#/Websocket)) to get latest block data (block height, block time). Data are displayed in human or block time. Since block times are different, the app self adjusts values over time to get an average block time.
+The app fetches data from [Midgard](https://midgard.ninerealms.com/v2/doc) (churn interval, next churn) and subscribes to [THORChain](https://docs.thorchain.org/)'s websocket events (powered by [Tendermint RPC](https://docs.tendermint.com/master/rpc/#/Websocket)) to get latest block data (block height, block time). Data are displayed in human or block time. Since block times are different, the app self adjusts values over time to get an average block time.
 
 ## Local development
 
@@ -34,9 +34,9 @@ Following ENV can be used to change URLs of `Midgard` and `THORChain` websocket 
 
 ```
 # Midgard URL
-VITE_MIDGARD_API_URL=https://midgard.thorchain.info/v2
+VITE_MIDGARD_API_URL=https://midgard.ninerealms.com/v2
 # THORChain RPC url for websocket
-VITE_THORCHAIN_WS_URL=wss://rpc.thorchain.info/websocket
+VITE_THORCHAIN_WS_URL=wss://rpc.ninerealms.com/websocket
 ```
 
 Put these ^ into `env` file before building the source. Check [env.sample](env.sample) to see an example.
