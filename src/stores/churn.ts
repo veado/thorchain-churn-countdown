@@ -69,12 +69,12 @@ export const toggleChurnType = () => {
 
 const MIDGARD_API_URL = envOrDefault(
   import.meta.env.VITE_MIDGARD_API_URL,
-  "https://midgard.thorchain.info/v2"
+  "https://midgard.ninerealms.com/v2"
 );
 
 const THORCHAIN_WS_URL = envOrDefault(
   import.meta.env.VITE_THORCHAIN_WS_URL,
-  "wss://rpc.thorchain.info/websocket"
+  "wss://rpc.ninerealms.com/websocket"
 );
 
 const mimir$ = FP.pipe(
