@@ -90,7 +90,7 @@ const mimir$ = FP.pipe(
 
 const mimirInterval$ = FP.pipe(
   Rx.timer(0 /* trigger w/o delays */, 5 * 60 * 1000 /* 5 min  */),
-  Rx.switchMapTo(mimir$),
+  Rx.switchMap(() => mimir$),
   RxOp.shareReplay(1)
 );
 
@@ -195,7 +195,7 @@ const midgardNetwork$ = () =>
 // Reload Midgard `network` every 5 min
 const midgardNetworkInterval$ = FP.pipe(
   Rx.timer(0 /* trigger w/o delays */, 5 * 60 * 1000 /* 5 min  */),
-  Rx.switchMapTo(midgardNetwork$()),
+  Rx.switchMap(() => midgardNetwork$()),
   Rx.shareReplay(1)
 );
 
@@ -362,7 +362,7 @@ const nextPoolChurn$ = (): Rx.Observable<number> => {
       // Reset counter
       counter = 0;
     }),
-    Rx.switchMapTo(blockHeight$),
+    Rx.switchMap(() => blockHeight$),
     RxOp.map((blockHeight) => {
       // With each new block height, we increase counter ...
       counter++;
