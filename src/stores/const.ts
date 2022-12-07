@@ -1,5 +1,7 @@
 import type { HumanTime, NewBlock } from "./types";
 
+export const APP_IDENTIFIER = import.meta.env?.VITE_APP_IDENTIFIER ?? "";
+
 export const INITIAL_HUMAN_TIME: HumanTime = {
   days: 0,
   hours: 0,
