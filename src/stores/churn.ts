@@ -31,6 +31,7 @@ import {
   wsNewBlockIO,
 } from "./types";
 import {
+  APP_IDENTIFIER,
   INITIAL_BLOCK_TIME,
   INITIAL_HUMAN_TIME,
   INITIAL_NEW_BLOCK,
@@ -38,6 +39,8 @@ import {
 
 // https://day.js.org/docs/en/plugin/duration
 dayjs.extend(duration);
+
+const headers = { "x-client-id": `${APP_IDENTIFIER}` };
 
 const LS_CHURNTYPE = "tcc-ctype";
 /* Try to get's intital churn type from LS */
@@ -78,7 +81,7 @@ const THORCHAIN_WS_URL = envOrDefault(
 );
 
 const mimir$ = FP.pipe(
-  RxAjax.ajax.getJSON<Mimir>(`${MIDGARD_API_URL}/thorchain/mimir`),
+  RxAjax.ajax.getJSON<Mimir>(`${MIDGARD_API_URL}/thorchain/mimir`, headers),
   RxOp.map((response) => mimirIO.decode(response)),
   RxOp.map((result) =>
     // t.Errors -> Error
@@ -106,7 +109,8 @@ const mimirPoolCycle$ = FP.pipe(
 
 const midgardConstants$ = FP.pipe(
   RxAjax.ajax.getJSON<MidgardConstants>(
-    `${MIDGARD_API_URL}/thorchain/constants`
+    `${MIDGARD_API_URL}/thorchain/constants`,
+    headers
   ),
   RxOp.map((response) => midgardConstantsIO.decode(response)),
   RxOp.map((result) =>
@@ -178,7 +182,7 @@ export const churnInterval$: Rx.Observable<number> = FP.pipe(
 
 const midgardNetwork$ = () =>
   FP.pipe(
-    RxAjax.ajax.getJSON<MidgardNetwork>(`${MIDGARD_API_URL}/network`),
+    RxAjax.ajax.getJSON<MidgardNetwork>(`${MIDGARD_API_URL}/network`, headers),
     RxOp.map((response) => midgardNetworkIO.decode(response)),
     RxOp.map((result) =>
       // t.Errors -> Error
