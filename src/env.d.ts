@@ -8,7 +8,8 @@
 interface ImportMetaEnv {
   readonly VITE_APP_IDENTIFIER: string;
   readonly VITE_MIDGARD_API_URL: string;
-  readonly VITE_THORCHAIN_WS_URL: string;
+  readonly VITE_THORNODE_WS_URL: string;
+  readonly VITE_THORNODE_API_URL: string;
   readonly VITE_COMMIT_HASH: string;
   readonly VITE_VERSION: string;
 }
