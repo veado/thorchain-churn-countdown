@@ -73,7 +73,7 @@
             >
               <progress
                 class="progress progress-primary h-4 sm:h-8"
-                value={$percentLeft$}
+                value={100-$percentLeft$}
                 max="100"
               />
             </div>
