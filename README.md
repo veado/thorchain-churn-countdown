@@ -30,16 +30,18 @@ All sources in `dist` folder are ready to deploy.
 
 ## ENV
 
-Following ENV can be used to change URLs of `Midgard` and `THORChain` websocket endpoints.
+Use following `ENV`'s to change URLs of `Midgard` and `THORNode` endpoints.
 
 ```
-# Midgard URL
+# Midgard API url
 VITE_MIDGARD_API_URL=https://midgard.ninerealms.com/v2
-# THORChain RPC url for websocket
-VITE_THORCHAIN_WS_URL=wss://rpc.ninerealms.com/websocket
+# THORNode RPC url for websocket
+VITE_THORNODE_WS_URL=wss://rpc.ninerealms.com/websocket
+# THORNode API url
+VITE_THORNODE_API_URL=https://thornode.ninerealms.com
 ```
 
-Put these ^ into `env` file before building the source. Check [env.sample](env.sample) to see an example.
+Put these ^ into an `.env` file before building the app. Take [env.sample](env.sample) as an example.
 
 ## Build with (in alphabetical order)
 

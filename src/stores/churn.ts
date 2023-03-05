@@ -75,13 +75,18 @@ const MIDGARD_API_URL = envOrDefault(
   "https://midgard.ninerealms.com/v2"
 );
 
-const THORCHAIN_WS_URL = envOrDefault(
-  import.meta.env.VITE_THORCHAIN_WS_URL,
+const THORNODE_API_URL = envOrDefault(
+  import.meta.env.VITE_THORNODE_API_URL,
+  "https://thornode.ninerealms.com"
+);
+
+const THORNODE_WS_URL = envOrDefault(
+  import.meta.env.VITE_THORNODE_WS_URL,
   "wss://rpc.ninerealms.com/websocket"
 );
 
 const mimir$ = FP.pipe(
-  RxAjax.ajax.getJSON<Mimir>(`${MIDGARD_API_URL}/thorchain/mimir`, headers),
+  RxAjax.ajax.getJSON<Mimir>(`${THORNODE_API_URL}/thorchain/mimir`, headers),
   RxOp.map((response) => mimirIO.decode(response)),
   RxOp.map((result) =>
     // t.Errors -> Error
@@ -205,7 +210,7 @@ const midgardNetworkInterval$ = FP.pipe(
 
 const blockTimes$ = new Rx.BehaviorSubject<number[]>([]);
 
-const ws$$ = webSocket(THORCHAIN_WS_URL);
+const ws$$ = webSocket(THORNODE_WS_URL);
 
 export const newBlock$: Rx.Observable<NewBlock> = ws$$
   .multiplex(
