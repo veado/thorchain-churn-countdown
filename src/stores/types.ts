@@ -7,6 +7,8 @@ export enum Theme {
   LIGHT = "light",
 }
 
+export type WS_STATUS = "connected" | "closed" | "connecting";
+
 export type Churn = Either<"pools", "nodes">;
 
 export const ChurnNodes: Churn = E.right("nodes");

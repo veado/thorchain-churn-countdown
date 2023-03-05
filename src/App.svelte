@@ -22,7 +22,11 @@
     churnIntervalTime$,
     toggleChurnType,
     churnType$,
+    wsStatus$,
   } from "./stores/churn";
+  import { bgColorByWSStatus } from "./utils/renderer";
+  import AsyncData from "./components/AsyncData.svelte";
+  import StatsLoader from "./components/StatsLoader.svelte";
 
   type Time = "human" | "block";
 
@@ -48,12 +52,12 @@
         <div class="btn-group w-full">
           <button
             on:click={() => toggleChurnType()}
-            class="btn btn-lg w-1/2"
+            class="btn btn-md sm:btn-lg w-1/2"
             class:btn-active={E.isRight($churnType$)}>Nodes</button
           >
           <button
             on:click={() => toggleChurnType()}
-            class="btn btn-lg w-1/2"
+            class="btn btn-md sm:btn-lg w-1/2"
             class:btn-active={E.isLeft($churnType$)}>Pools</button
           >
         </div>
@@ -66,16 +70,22 @@
           {:else}
             <CountdownBlock blocks={$blocksLeft$} />
           {/if}
-          <div class="pt-8">
+          <div class="pt-4 sm:pt-8">
             <div
               data-tip="{$percentLeft$.toFixed(2)}% left"
               class="tooltip w-full tooltip-bottom"
             >
-              <progress
-                class="progress progress-primary h-4 sm:h-8"
-                value={100-$percentLeft$}
-                max="100"
-              />
+              {#if $percentLeft$ > 0}
+                <!-- progress -->
+                <progress
+                  class="progress progress-primary h-2 sm:h-4"
+                  value={100 - $percentLeft$}
+                  max="100"
+                />
+              {:else}
+              <!-- animated progress -->
+                <progress class="progress progress-primary h-2 sm:h-4" />
+              {/if}
             </div>
           </div>
         </div>
@@ -85,8 +95,27 @@
             <div class="stat-figure">
               <Icon src={Cube} size="48" class="outline-none" />
             </div>
-            <div class="stat-title">Current block</div>
-            <div class="stat-value">{$blockHeight$}</div>
+            <div class="stat-title grid-cols-none">
+              <div class="flex justify-center items-center">
+                <div
+                  data-tip="WebSocket {$wsStatus$}"
+                  class="tooltip tooltip-right"
+                >
+                  <!-- ws status icon -->
+                  <span
+                    class="{bgColorByWSStatus(
+                      $wsStatus$
+                    )} mr-1 block h-2 w-2 rounded-full"
+                  />
+                </div>
+                Current block
+              </div>
+            </div>
+            <AsyncData
+              class="stat-value"
+              data={$blockHeight$}
+              loading={StatsLoader}
+            />
             <div class="stat-desc">~{($blockTime$ / 1000).toFixed(2)} s/b</div>
           </div>
           <div class="stat">
@@ -94,7 +123,11 @@
               <Icon src={Tag} size="48" class="outline-none" />
             </div>
             <div class="stat-title">Churn block</div>
-            <div class="stat-value">{$nextChurn$}</div>
+            <AsyncData
+              class="stat-value"
+              data={$nextChurn$}
+              loading={StatsLoader}
+            />
             <div class="stat-desc">
               Churn interval:
               {#if time === "human"}
@@ -110,12 +143,12 @@
         <div class="btn-group">
           <button
             on:click={() => (time = "human")}
-            class="btn btn-lg"
+            class="btn btn-md sm:btn-lg"
             class:btn-active={time === "human"}>Human<br /> time</button
           >
           <button
             on:click={() => (time = "block")}
-            class="btn btn-lg"
+            class="btn btn-md sm:btn-lg"
             class:btn-active={time === "block"}>Block<br />time</button
           >
         </div>
