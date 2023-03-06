@@ -5,6 +5,8 @@
   import CountdownTime from "./components/CountdownTime.svelte";
   import CountdownBlock from "./components/CountdownBlock.svelte";
   import logo from "./assets/thorchain.png";
+  import * as FP from "fp-ts/lib/function";
+  import * as O from "fp-ts/lib/Option";
 
   import { Cube, Tag } from "svelte-hero-icons";
 
@@ -23,14 +25,22 @@
     toggleChurnType,
     churnType$,
     wsStatus$,
+    reloadMidgardNetwork,
+    reloadMimir,
+    mimirError$,
+    midgardNetworkError$,
   } from "./stores/churn";
   import { bgColorByWSStatus } from "./utils/renderer";
   import AsyncData from "./components/AsyncData.svelte";
   import StatsLoader from "./components/StatsLoader.svelte";
+  import ErrorAlert from "./components/ErrorAlert.svelte";
 
   type Time = "human" | "block";
 
   let time: Time = "human";
+
+  $: mimirError = FP.pipe($mimirError$, O.toUndefined);
+  $: midgardNetworkError = FP.pipe($midgardNetworkError$, O.toUndefined);
 
   onMount(async () => {
     initTheme();
@@ -38,6 +48,7 @@
 </script>
 
 <div class="flex flex-col h-screen">
+  <!-- header -->
   <div class="navbar mb-1 sm:mb-2 shadow-lg bg-neutral text-neutral-content">
     <div class="flex-1 p-1 sm:p-2 mx-1 sm:mx-2">
       <a class="btn btn-circle btn-ghost" href="https://docs.thorchain.org">
@@ -46,6 +57,23 @@
     </div>
     <ThemeSwitch />
   </div>
+  {#if mimirError}
+    <ErrorAlert
+      class="m-3"
+      title="Could not load Mimir data from THORNode"
+      error={mimirError}
+      callback={reloadMimir}
+    />
+  {/if}
+  {#if midgardNetworkError}
+    <ErrorAlert
+      class="m-3"
+      title="Could not load network data from Midgard"
+      error={midgardNetworkError}
+      callback={reloadMidgardNetwork}
+    />
+  {/if}
+  <!-- main content -->
   <main class="grid justify-center pt-6 sm:pt-8 flex-grow">
     <div>
       <div class="card text-center shadow-2xl">
@@ -83,7 +111,7 @@
                   max="100"
                 />
               {:else}
-              <!-- animated progress -->
+                <!-- animated progress -->
                 <progress class="progress progress-primary h-2 sm:h-4" />
               {/if}
             </div>
@@ -155,6 +183,7 @@
       </div>
     </div>
   </main>
+  <!-- footer -->
   <footer class="mt-10 p-4 footer text-base-content footer-center">
     <!-- GH -->
     <div class=" w-full">

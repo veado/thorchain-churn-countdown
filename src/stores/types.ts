@@ -27,25 +27,11 @@ export type HumanTime = {
  * https://midgard.ninerealms.com/v2/thorchain/mimir
  */
 export const mimirIO = t.type({
-  CHURNINTERVAL: t.union([t.number, t.undefined]),
-  POOLCYCLE: t.union([t.number, t.undefined]),
+  CHURNINTERVAL: t.number,
+  POOLCYCLE: t.number,
 });
 
 export type Mimir = t.TypeOf<typeof mimirIO>;
-
-/**
- * IO type for Midgards `thorchain/constants` endpoint
- * It includes few (not all) values we do need here only
- * https://midgard.ninerealms.com/v2/doc#operation/GetProxiedConstants
- */
-export const midgardConstantsIO = t.type({
-  int_64_values: t.type({
-    ChurnInterval: t.number,
-    PoolCycle: t.number,
-  }),
-});
-
-export type MidgardConstants = t.TypeOf<typeof midgardConstantsIO>;
 
 /**
  * IO type for Midgards `thorchain/constants` endpoint

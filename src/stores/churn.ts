@@ -19,7 +19,6 @@ import {
   ChurnPools,
   type Churn,
   type HumanTime,
-  type MidgardConstants,
   type MidgardNetwork,
   type Mimir,
   type NewBlock,
@@ -27,7 +26,6 @@ import {
   type WS_STATUS,
 } from "./types";
 import {
-  midgardConstantsIO,
   mimirIO,
   midgardNetworkIO,
   wsNewBlockIO,
@@ -40,6 +38,7 @@ import {
 import { writable } from "svelte/store";
 import { toReadable } from "../utils/data";
 import { sequenceTRD } from "../utils/fp";
+import { triggerStream } from "../utils/rx";
 
 // https://day.js.org/docs/en/plugin/duration
 dayjs.extend(duration);
@@ -89,92 +88,83 @@ const THORNODE_WS_URL = envOrDefault(
   "wss://rpc.ninerealms.com/websocket"
 );
 
-const mimir$ = FP.pipe(
-  RxAjax.ajax.getJSON<Mimir>(`${THORNODE_API_URL}/thorchain/mimir`, headers),
-  RxOp.map((response) => mimirIO.decode(response)),
-  RxOp.map((result) =>
-    // t.Errors -> Error
-    E.mapLeft((_: t.Errors) =>
-      Error(`Failed to load mimir ${PathReporter.report(result)}`)
-    )(result)
+export const mimirError$ = new Rx.BehaviorSubject<O.Option<Error>>(O.none);
+
+const { stream$: reloadMimir$, trigger: reloadMimir } = triggerStream();
+
+export { reloadMimir };
+
+const mimirRD$: Rx.Observable<RD.RemoteData<Error, Mimir>> = FP.pipe(
+  Rx.combineLatest([
+    reloadMimir$,
+    // reload mimir every 5 min
+    Rx.timer(0 /* trigger w/o delays */, 5 * 60 * 1000 /* 5 min  */),
+  ]),
+  RxOp.debounceTime(300),
+  RxOp.switchMap(() => {
+    // clear errors before reloading
+    mimirError$.next(O.none);
+    return FP.pipe(
+      RxAjax.ajax.getJSON<Mimir>(
+        `${THORNODE_API_URL}/thorchain/mimir`,
+        headers
+      ),
+      RxOp.map((response) => mimirIO.decode(response)),
+      RxOp.map((decodedResult) =>
+        FP.pipe(
+          decodedResult,
+          // t.Errors -> Error
+          E.mapLeft((_: t.Errors) => {
+            const error = Error(
+              `Failed to load mimir ${PathReporter.report(decodedResult)}`
+            );
+            // update error state
+            mimirError$.next(O.some(error));
+            return error;
+          })
+        )
+      ),
+      RxOp.map(RD.fromEither),
+      RxOp.startWith(RD.pending)
+    );
+  }),
+  RxOp.shareReplay(1)
+);
+
+const mimir$: Rx.Observable<E.Either<Error, Mimir>> = FP.pipe(
+  mimirRD$,
+  RxOp.map(
+    RD.toEither(
+      () => new Error("Mimir not fetched"),
+      () => new Error("Mimir fetching")
+    )
   )
-);
-
-const mimirInterval$ = FP.pipe(
-  Rx.timer(0 /* trigger w/o delays */, 5 * 60 * 1000 /* 5 min  */),
-  Rx.switchMap(() => mimir$),
-  RxOp.shareReplay(1)
-);
-
-const mimirNodeChurnInterval$ = FP.pipe(
-  mimirInterval$,
-  RxOp.map(E.map((v) => v.CHURNINTERVAL))
-);
-
-const mimirPoolCycle$ = FP.pipe(
-  mimirInterval$,
-  RxOp.map(E.map((v) => v.POOLCYCLE))
-);
-
-const midgardConstants$ = FP.pipe(
-  RxAjax.ajax.getJSON<MidgardConstants>(
-    `${MIDGARD_API_URL}/thorchain/constants`,
-    headers
-  ),
-  RxOp.map((response) => midgardConstantsIO.decode(response)),
-  RxOp.map((result) =>
-    // t.Errors -> Error
-    E.mapLeft((_: t.Errors) =>
-      Error(
-        `Failed to load constants from Midgard ${PathReporter.report(result)}`
-      )
-    )(result)
-  ),
-  RxOp.shareReplay(1)
-);
-
-const midgardConstantsNodeChurnInterval$ = FP.pipe(
-  midgardConstants$,
-  RxOp.map(E.map((v) => v.int_64_values.ChurnInterval))
 );
 
 export const INITIAL_NODE_CHURNINTERVAL = 0;
 
 export const nodeChurnInterval$: Rx.Observable<number> = FP.pipe(
-  mimirNodeChurnInterval$,
-  RxOp.switchMap((eResult) =>
-    FP.pipe(
-      eResult,
-      // In case of failure (no mimir set), load data from `constants`
-      E.fold(
-        () => midgardConstantsNodeChurnInterval$,
-        (v) => Rx.of(E.right(v))
-      )
-    )
-  ),
+  mimir$,
+  RxOp.map(E.map((v) => v.CHURNINTERVAL)),
+  RxOp.catchError((error) => {
+    // store error
+    mimirError$.next(O.some(error));
+    return Rx.of(E.left(error));
+  }),
   RxOp.map(E.getOrElse(() => 0)),
   RxOp.startWith(INITIAL_NODE_CHURNINTERVAL)
 );
 
-const midgardConstantsPoolCycle$ = FP.pipe(
-  midgardConstants$,
-  RxOp.map(E.map((v) => v.int_64_values.PoolCycle))
-);
-
 export const INITIAL_POOL_CHURNINTERVAL = 0;
 
-export const poolChurnInterval$: Rx.Observable<number> = FP.pipe(
-  mimirPoolCycle$,
-  RxOp.switchMap((eResult) =>
-    FP.pipe(
-      eResult,
-      // In case of failure (no mimir set), load data from `constants`
-      E.fold(
-        () => midgardConstantsPoolCycle$,
-        (v) => Rx.of(E.right(v))
-      )
-    )
-  ),
+const poolChurnInterval$: Rx.Observable<number> = FP.pipe(
+  mimir$,
+  RxOp.map(E.map((v) => v.POOLCYCLE)),
+  RxOp.catchError((error) => {
+    // store error
+    mimirError$.next(O.some(error));
+    return Rx.of(E.left(error));
+  }),
   RxOp.map(E.getOrElse(() => 0)),
   RxOp.startWith(INITIAL_POOL_CHURNINTERVAL)
 );
@@ -193,27 +183,63 @@ export const churnInterval$: Rx.Observable<number> = FP.pipe(
   RxOp.shareReplay(1)
 );
 
-const midgardNetwork$ = () =>
+export const midgardNetworkError$ = new Rx.BehaviorSubject<O.Option<Error>>(
+  O.none
+);
+
+const { stream$: reloadMidgardNetwork$, trigger: reloadMidgardNetwork } =
+  triggerStream();
+
+export { reloadMidgardNetwork };
+
+const midgardNetworkRD$: Rx.Observable<RD.RemoteData<Error, MidgardNetwork>> =
   FP.pipe(
-    RxAjax.ajax.getJSON<MidgardNetwork>(`${MIDGARD_API_URL}/network`, headers),
-    RxOp.map((response) => midgardNetworkIO.decode(response)),
-    RxOp.map((result) =>
-      // t.Errors -> Error
-      E.mapLeft((_: t.Errors) =>
-        Error(
-          `Failed to load network data from Midgard ${PathReporter.report(
-            result
-          )}`
-        )
-      )(result)
-    )
+    Rx.combineLatest([
+      reloadMidgardNetwork$,
+      // Reload Midgard `network` every 5 min
+      Rx.timer(0 /* trigger w/o delays */, 5 * 60 * 1000 /* 5 min  */),
+    ]),
+    RxOp.debounceTime(300),
+    RxOp.switchMap((_) => {
+      // clear errors before reloading
+      midgardNetworkError$.next(O.none);
+      return FP.pipe(
+        RxAjax.ajax.getJSON<MidgardNetwork>(
+          `${MIDGARD_API_URL}/network`,
+          headers
+        ),
+        RxOp.map((response) => midgardNetworkIO.decode(response)),
+        RxOp.map((result) =>
+          FP.pipe(
+            result,
+            // t.Errors -> Error
+            E.mapLeft((_: t.Errors) => {
+              const error = Error(
+                `Failed to load network data from Midgard ${PathReporter.report(
+                  result
+                )}`
+              );
+              // update error state
+              midgardNetworkError$.next(O.some(error));
+              return error;
+            })
+          )
+        ),
+        RxOp.map(RD.fromEither),
+        RxOp.startWith(RD.pending)
+      );
+    }),
+    Rx.shareReplay(1)
   );
 
-// Reload Midgard `network` every 5 min
-const midgardNetworkInterval$ = FP.pipe(
-  Rx.timer(0 /* trigger w/o delays */, 5 * 60 * 1000 /* 5 min  */),
-  Rx.switchMap(() => midgardNetwork$()),
-  Rx.shareReplay(1)
+const midgardNetwork$: Rx.Observable<E.Either<Error, MidgardNetwork>> = FP.pipe(
+  midgardNetworkRD$,
+  RxOp.map(
+    RD.toEither(
+      () => new Error("Midgard network not fetched"),
+      () => new Error("Midgard network fetching")
+    )
+  )
 );
 
 const blockTimes$ = new Rx.BehaviorSubject<number[]>([]);
@@ -374,32 +400,31 @@ export const blockHeight$: Rx.Observable<RD.RemoteData<Error, number>> =
 export const INITIAL_NEXT_CHURN_HEIGHT = 0;
 
 // Block height of next Node churn
-const nextNodeChurn$: Rx.Observable<RD.RemoteData<Error, number>> = FP.pipe(
-  midgardNetworkInterval$,
-  RxOp.map((eResult) =>
-    FP.pipe(
-      eResult,
-      E.map(({ nextChurnHeight }) => parseInt(nextChurnHeight)),
-      RD.fromEither
-    )
-  ),
+const nextNodeChurnRD$: Rx.Observable<RD.RemoteData<Error, number>> = FP.pipe(
+  midgardNetworkRD$,
+  RxOp.map(RD.map(({ nextChurnHeight }) => parseInt(nextChurnHeight))),
   RxOp.startWith(RD.pending)
 );
 
 export const poolActivationCountdown$: Rx.Observable<number> = FP.pipe(
-  midgardNetworkInterval$,
+  midgardNetwork$,
   RxOp.map((eResult) =>
     FP.pipe(
       eResult,
       E.map(({ poolActivationCountdown }) => parseInt(poolActivationCountdown))
     )
   ),
+  RxOp.catchError((error) => {
+    // store error
+    midgardNetworkError$.next(O.some(error));
+    return Rx.of(E.left(error));
+  }),
   RxOp.map(E.getOrElse(() => 0)),
   RxOp.startWith(0)
 );
 
 // Next pool churn does some internal calculations to keep requests to Midgard small
-const nextPoolChurn$ = (): Rx.Observable<RD.RemoteData<Error, number>> => {
+const nextPoolChurnRD$ = (): Rx.Observable<RD.RemoteData<Error, number>> => {
   // Local state to count number of new block height coming in
   let counter = 0;
   // Local state of `poolActivationCountdown` we get from Midgard
@@ -434,8 +459,8 @@ export const nextChurn$: Rx.Observable<RD.RemoteData<Error, number>> = FP.pipe(
     FP.pipe(
       churnType,
       E.fold(
-        (_ /* pools */) => nextPoolChurn$(),
-        (_ /* nodes */) => nextNodeChurn$
+        (_ /* pools */) => nextPoolChurnRD$(),
+        (_ /* nodes */) => nextNodeChurnRD$
       )
     )
   ),
