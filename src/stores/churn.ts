@@ -25,11 +25,7 @@ import {
   type WSNewBlock,
   type WS_STATUS,
 } from "./types";
-import {
-  mimirIO,
-  midgardNetworkIO,
-  wsNewBlockIO,
-} from "./types";
+import { mimirIO, midgardNetworkIO, wsNewBlockIO } from "./types";
 import {
   APP_IDENTIFIER,
   INITIAL_BLOCK_TIME,
@@ -490,8 +486,27 @@ export const blocksLeft$: Rx.Observable<number> = FP.pipe(
       }),
       RD.getOrElse(() => INITIAL_BLOCKS_LEFT)
     );
-  })
+  }),
+  RxOp.shareReplay(1)
 );
+
+/** 
+ * Subscription to auto-reload Midgards network data 
+ * whenever a churn will start
+ * 
+ * Note: Since we can't check for block = 0, which is `INITIAL_BLOCKS_LEFT`,
+ * we check block = 1, but with a delay of 10 sec.
+ * By a given block time of ~6sec. it's very similar to check block = 0,
+ * by including an offset (~4sec.) to make sure Midgard will provide an updated `nextChurnHeight` 
+ */
+FP.pipe(
+  blocksLeft$,
+  RxOp.delay(10000),
+).subscribe((blockLeft) => {
+  if (blockLeft === 1) {
+    reloadMidgardNetwork();
+  }
+});
 
 export const INITIAL_PERCENT_LEFT = 0;
 

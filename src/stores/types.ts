@@ -22,9 +22,9 @@ export type HumanTime = {
 };
 
 /**
- * IO type for Midgard's `mimir` endpoint
- * It includes few (not all) values we do need here only
- * https://midgard.ninerealms.com/v2/thorchain/mimir
+ * IO type for THORNode's `mimir` endpoint
+ * It includes few (not all) values we do need here
+ * https://thornode.ninerealms.com/thorchain/mimir
  */
 export const mimirIO = t.type({
   CHURNINTERVAL: t.number,
@@ -34,9 +34,9 @@ export const mimirIO = t.type({
 export type Mimir = t.TypeOf<typeof mimirIO>;
 
 /**
- * IO type for Midgards `thorchain/constants` endpoint
- * It includes few (not all) values we do need here only
- * https://midgard.ninerealms.com/v2/doc#operation/GetProxiedConstants
+ * IO type for Midgards `thorchain/network` endpoint
+ * It includes few (not all) values we do need here
+ * https://midgard.ninerealms.com/v2/doc#operation/GetNetworkData
  */
 export const midgardNetworkIO = t.type({
   nextChurnHeight: t.string,
